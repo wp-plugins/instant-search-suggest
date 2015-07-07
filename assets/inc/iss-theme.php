@@ -46,8 +46,8 @@ function wpiss_post_template() {
 				<img src="{{image}}" width="50" height="50" />
 			{{/image}}
 			{{{title}}}
-			<span class="iss-sub">{{postdate}}</div>
-			<span class="iss-sub">{{posttype}}</div>
+			<span class="iss-sub">{{postdate}}</span>
+			<span class="iss-sub">{{posttype}}</span>
 		</li>
 	</script>';
 
@@ -66,10 +66,46 @@ function wpiss_taxonomy_template() {
 	<script type="x-tmpl-mustache" id="wpiss-taxonomy-template">
 		<li class="iss-result">
 			{{{title}}}
-			<span class="iss-sub">{{taxonomy}} ({{count}})</div>
+			<span class="iss-sub">{{taxonomy}} ({{count}})</span>
 		</li>
 	</script>';
 
 	echo apply_filters( 'wpiss_taxonomy_template', $template );
 }
 add_action( 'wp_footer', 'wpiss_taxonomy_template');
+
+/**
+ * Filter search queries to match settings
+ *
+ * @return object
+ */
+function wpiss_pre_get_posts( $query ) {
+
+	if ( $query->is_main_query() && is_search() ) {
+
+		// grab settings and build post type array
+		$options = get_option( 'wpiss_options' );
+		$post_query = array();
+		$args = array(
+			'public' => true,
+			'show_ui' => true
+		);
+		$output = 'objects';
+		$operator = 'and';
+		$post_types = get_post_types( $args, $output, $operator );
+
+		if ( !empty( $post_types ) ) {
+
+			foreach ( $post_types as $post_type ) {
+
+				if ( isset( $options['wpiss_chk_post_' . $post_type->name] ) ) {
+					$post_query[] = $post_type->name;
+				}
+			}
+			$query->set( 'post_type', $post_query );
+		}
+	}
+
+	return $query;
+}
+add_filter( 'pre_get_posts', 'wpiss_pre_get_posts' );
